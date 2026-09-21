@@ -1,0 +1,15 @@
+# Entorno virtual
+venv/
+
+# Variables de entorno (contiene el token, NUNCA se sube)
+.env
+
+# Cache de Python
+__pycache__/
+*.pyc
+
+# Base de datos local (progreso de usuarios)
+quizbot.db
+
+# Archivos del sistema
+.DS_Store
