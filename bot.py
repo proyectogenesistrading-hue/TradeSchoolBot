@@ -289,8 +289,23 @@ def main():
     app.add_handler(CallbackQueryHandler(manejar_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder_pregunta))
 
-    logger.info("Bot iniciado. Esperando mensajes...")
-    app.run_polling()
+    # Render define esta variable automáticamente en sus Web Services.
+    # Si existe, corremos en modo webhook (producción). Si no, modo polling (local).
+    render_url = os.environ.get("RENDER_EXTERNAL_URL")
+
+    if render_url:
+        port = int(os.environ.get("PORT", 10000))
+        webhook_path = TOKEN  # usamos el token como ruta secreta
+        logger.info(f"Bot iniciado en modo webhook en el puerto {port}...")
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            url_path=webhook_path,
+            webhook_url=f"{render_url}/{webhook_path}",
+        )
+    else:
+        logger.info("Bot iniciado en modo polling (local). Esperando mensajes...")
+        app.run_polling()
 
 
 if __name__ == "__main__":
