@@ -135,7 +135,11 @@ async def ayuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def listar_temas(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """/temas: muestra los 12 módulos como botones, con una línea de qué trae cada uno."""
+    """/temas: muestra los módulos como botones, con una línea de qué trae cada uno.
+    Funciona tanto llamada desde el comando /temas (update.message) como desde
+    un botón (update.callback_query, donde update.message no existe)."""
+    chat_id = update.effective_chat.id
+
     lineas = ["📚 *Elige un módulo para estudiar:*\n"]
     botones = []
     for n in sorted(MODULOS):
@@ -147,7 +151,7 @@ async def listar_temas(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parte = texto[i:i + 3500]
         markup = InlineKeyboardMarkup(botones) if i + 3500 >= len(texto) else None
         await con_reintentos(
-            update.message.reply_text, parte, parse_mode="Markdown", reply_markup=markup
+            context.bot.send_message, chat_id, parte, parse_mode="Markdown", reply_markup=markup
         )
 
 
@@ -387,18 +391,28 @@ async def manejar_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             total = len(examen["preguntas"])
             correctas = examen["correctas"]
             porcentaje = correctas / total * 100
+            modulo_terminado = examen["modulo"]
             botones = InlineKeyboardMarkup(
-                [[InlineKeyboardButton("⬅️ Volver a los módulos", callback_data="volver_modulos")]]
+                [
+                    [InlineKeyboardButton("🔁 Repetir examen", callback_data=f"repetir_examen:{modulo_terminado}")],
+                    [InlineKeyboardButton("📖 Repetir estudio del módulo", callback_data=f"estudiar:{modulo_terminado}")],
+                    [InlineKeyboardButton("⬅️ Volver a los módulos", callback_data="volver_modulos")],
+                ]
             )
             await con_reintentos(
                 context.bot.send_message,
                 chat_id,
-                f"🏁 *Examen del Módulo {examen['modulo']} terminado*\n\n"
+                f"🏁 *Examen del Módulo {modulo_terminado} terminado*\n\n"
                 f"Resultado: {correctas}/{total} correctas ({porcentaje:.0f}%)",
                 parse_mode="Markdown",
                 reply_markup=botones,
             )
             context.user_data.pop("examen", None)
+        return
+
+    if data.startswith("repetir_examen:"):
+        modulo = int(data.split(":", 1)[1])
+        await iniciar_examen_modulo(chat_id, context, modulo)
         return
 
     # --- Quiz suelto (/quiz) ---
